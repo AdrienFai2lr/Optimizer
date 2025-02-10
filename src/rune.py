@@ -27,7 +27,7 @@ class Rune:
             occupied_id=json_data["occupied_id"],
             slot_no=json_data["slot_no"],
             rank=json_data["rank"],
-            class_type=json_data["class"],  # Cette ligne correspond au champ 'class' du JSON
+            class_type=json_data["class"],  
             set_id=json_data["set_id"],
             upgrade_limit=json_data["upgrade_limit"],
             upgrade_curr=json_data["upgrade_curr"],

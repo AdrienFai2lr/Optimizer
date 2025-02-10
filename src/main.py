@@ -1,80 +1,165 @@
+# main.py
 import tkinter as tk
-from tkinter import messagebox, filedialog
-import json
-from game_data import GameData  # Assurez-vous que GameData est correctement défini
-from rune import Rune  # Importez la classe Rune
+from tkinter import messagebox, filedialog, ttk
+from unit_manager import UnitManager
+import logging
 
 class Application(tk.Tk):
     def __init__(self):
         super().__init__()
+        self.unit_manager = UnitManager()
+        self.setup_gui()
+    
+    def setup_gui(self):
+        self.title("Gestionnaire d'Unités")
+        self.geometry("800x600")
         
-        # Paramètres de l'application
-        self.title("Affichage des Unités")
-        self.geometry("600x400")
-
-        # Zone de texte pour afficher les informations
-        self.text_area = tk.Text(self, wrap=tk.WORD, height=20, width=60)
-        self.text_area.pack(pady=10)
+        # Frame principale
+        main_frame = tk.Frame(self)
+        main_frame.pack(expand=True, fill='both', padx=10, pady=5)
         
-        # Bouton pour charger et afficher les données d'un fichier JSON
-        self.load_button = tk.Button(self, text="Charger un fichier JSON", command=self.load_json)
-        self.load_button.pack(pady=10)
+        # Frame pour les contrôles
+        control_frame = tk.Frame(main_frame)
+        control_frame.pack(fill='x', pady=5)
+        
+        # Bouton de chargement
+        tk.Button(control_frame, text="Charger JSON", command=self.load_json).pack(side=tk.LEFT, padx=5)
+        
+        # Labels d'information
+        self.info_label = tk.Label(control_frame, text="")
+        self.info_label.pack(side=tk.LEFT, padx=10)
+        
+        # Frame pour les statistiques
+        self.stats_frame = tk.LabelFrame(main_frame, text="Statistiques", padx=5, pady=5)
+        self.stats_frame.pack(fill='x', pady=5)
+        
+        # Frame pour la sélection et l'affichage
+        selection_frame = tk.Frame(main_frame)
+        selection_frame.pack(fill='x', pady=5)
+        
+        # Label et Combobox pour la sélection d'unité
+        tk.Label(selection_frame, text="Sélectionner une unité:").pack(side=tk.LEFT, padx=5)
+        self.unit_selector = ttk.Combobox(selection_frame, width=50)
+        self.unit_selector.pack(side=tk.LEFT, padx=5)
+        self.unit_selector.bind('<<ComboboxSelected>>', self.on_unit_selected)
+        
+        # Zone de détails
+        details_frame = tk.Frame(main_frame)
+        details_frame.pack(expand=True, fill='both', pady=5)
+        
+        # Scrollbar et Text pour les détails
+        scrollbar = tk.Scrollbar(details_frame)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        self.details_text = tk.Text(details_frame, wrap=tk.WORD, yscrollcommand=scrollbar.set)
+        self.details_text.pack(expand=True, fill='both')
+        scrollbar.config(command=self.details_text.yview)
     
     def load_json(self):
-        # Ouvrir une fenêtre pour choisir un fichier JSON
-        file_path = filedialog.askopenfilename(filetypes=[("Fichiers JSON", "*.json")])  # Sélectionner un fichier JSON
-        
-        if file_path:
-            try:
-                with open(file_path, 'r') as file:
-                    json_data = json.load(file)
-                
-                # Créer une instance de GameData à partir du fichier JSON
-                game_data = GameData.from_json(json_data)
-                
-                # Afficher les informations du compte dans la zone de texte
-                self.display_account_info(game_data)
-            except FileNotFoundError:
-                messagebox.showerror("Erreur", f"Le fichier {file_path} n'a pas été trouvé.")
-            except json.JSONDecodeError:
-                messagebox.showerror("Erreur", "Erreur de décodage JSON. Veuillez vérifier la structure du fichier.")
-            except Exception as e:
-                messagebox.showerror("Erreur", f"Une erreur s'est produite : {e}")
+        file_path = filedialog.askopenfilename(filetypes=[("Fichiers JSON", "*.json")])
+        if not file_path:
+            return
+            
+        try:
+            num_units = self.unit_manager.load_from_json(file_path)
+            if num_units > 0:
+                self.update_unit_selector()
+                self.update_stats()
+                self.info_label.config(text=f"Compte: {self.unit_manager.current_wizard_id} - {num_units} unités chargées")
+            else:
+                messagebox.showwarning("Attention", "Aucune unité n'a été chargée du fichier.")
+        except Exception as e:
+            messagebox.showerror("Erreur", str(e))
     
-    def display_account_info(self, game_data):
-        """Affiche les informations du compte dans la zone de texte"""
-        self.text_area.delete(1.0, tk.END)  # Efface l'ancienne info
-        self.text_area.insert(tk.END, "Informations du compte :\n\n")
+    def update_unit_selector(self):
+        """Met à jour la liste déroulante des unités"""
+        units = []
+        for unit in self.unit_manager.units:
+            # Format: "ID: xxx - Monster ID: xxx - Niveau: xx - ★★★★★★"
+            stars = "★" * unit.stars
+            unit_str = f"ID: {unit.unit_id} - Monster ID: {unit.unit_master_id} - Niveau: {unit.unit_level} - {stars}"
+            units.append((unit_str, unit.unit_id))
         
-        # Affichage des informations essentielles de l'unité
-        self.text_area.insert(tk.END, f"WIZARD ID: {game_data.unit.wizard_id}\n")
-        self.text_area.insert(tk.END, f"Île ID: {game_data.unit.island_id}\n")
-        self.text_area.insert(tk.END, f"Position: X={game_data.unit.pos_x}, Y={game_data.unit.pos_y}\n")
-        self.text_area.insert(tk.END, f"Niveau: {game_data.unit.unit_level}\n")
-        self.text_area.insert(tk.END, f"Classe: {game_data.unit.class_type}\n")
-        self.text_area.insert(tk.END, "\n")
+        self.unit_selector['values'] = [u[0] for u in units]
+        if units:
+            self.unit_selector.set(units[0][0])
+            self.display_unit_details(units[0][1])
+    
+    def on_unit_selected(self, event):
+        """Gère la sélection d'une unité dans la liste déroulante"""
+        selection = self.unit_selector.get()
+        if selection:
+            unit_id = int(selection.split(" - ")[0].split(": ")[1])
+            self.display_unit_details(unit_id)
+    
+    def display_unit_details(self, unit_id):
+        """Affiche les détails de l'unité sélectionnée"""
+        unit = self.unit_manager.get_unit_by_id(unit_id)
+        if not unit:
+            return
+            
+        self.details_text.delete(1.0, tk.END)
+        
+        # Informations principales
+        self.details_text.insert(tk.END, "Informations principales:\n")
+        self.details_text.insert(tk.END, f"- ID: {unit.unit_id}\n")
+        self.details_text.insert(tk.END, f"- Monster ID: {unit.unit_master_id}\n")
+        self.details_text.insert(tk.END, f"- Niveau: {unit.unit_level}\n")
+        self.details_text.insert(tk.END, f"- Étoiles: {'★' * unit.stars}\n")
+        self.details_text.insert(tk.END, f"- Attribut: {unit.attribute}\n")
+        
+        # Stats
+        self.details_text.insert(tk.END, "\nStats:\n")
+        self.details_text.insert(tk.END, f"- HP: {unit.stats['hp']} (base: {unit.stats['hp_base']})\n")
+        self.details_text.insert(tk.END, f"- ATK: {unit.stats['atk']}\n")
+        self.details_text.insert(tk.END, f"- DEF: {unit.stats['def']}\n")
+        self.details_text.insert(tk.END, f"- SPD: {unit.stats['spd']}\n")
+        self.details_text.insert(tk.END, f"- Résistance: {unit.stats['resist']}%\n")
+        self.details_text.insert(tk.END, f"- Précision: {unit.stats['accuracy']}%\n")
+        self.details_text.insert(tk.END, f"- Taux Critique: {unit.stats['critical_rate']}%\n")
+        self.details_text.insert(tk.END, f"- Dégâts Critiques: {unit.stats['critical_damage']}%\n")
+        
+        # Skills
+        self.details_text.insert(tk.END, "\nCompétences:\n")
+        for skill in unit.skills:
+            self.details_text.insert(tk.END, f"- ID {skill[0]}: Niveau {skill[1]}\n")
+        
+        # Runes
+        if unit.runes:
+            self.details_text.insert(tk.END, "\nRunes:\n")
+            for rune in unit.runes:
+                self.details_text.insert(tk.END, 
+                    f"- Slot {rune['slot']}: Set {rune['set_id']}, "
+                    f"{rune['stars']}★, Rang {rune['rank']}\n")
+        
+        # Artefacts
+        if unit.artifacts:
+            self.details_text.insert(tk.END, "\nArtefacts:\n")
+            for artifact in unit.artifacts:
+                self.details_text.insert(tk.END, 
+                    f"- Slot {artifact['slot']}: Type {artifact['type']}\n")
+    
+    def update_stats(self):
+        """Met à jour l'affichage des statistiques"""
+        for widget in self.stats_frame.winfo_children():
+            widget.destroy()
+            
+        stats = self.unit_manager.get_stats()
+        if isinstance(stats, str):
+            tk.Label(self.stats_frame, text=stats).pack()
+            return
+            
+        # Afficher les statistiques
+        tk.Label(self.stats_frame, text=f"Total: {stats['total']} unités").pack(side=tk.LEFT, padx=10)
+        
+        # Par étoiles
+        stars_text = "Par étoiles: " + ", ".join(f"{k}★: {v}" for k, v in sorted(stats['par_étoiles'].items()))
+        tk.Label(self.stats_frame, text=stars_text).pack(side=tk.LEFT, padx=10)
+        
+        # Par attribut
+        attr_text = "Par attribut: " + ", ".join(f"Type {k}: {v}" for k, v in sorted(stats['par_attribut'].items()))
+        tk.Label(self.stats_frame, text=attr_text).pack(side=tk.LEFT, padx=10)
 
-        # Affichage des compétences
-        self.text_area.insert(tk.END, f"Compétences : \n")
-        for skill in game_data.unit.skills:
-            self.text_area.insert(tk.END, f"  - Skill ID: {skill[0]}, Niveau: {skill[1]}\n")
-
-        # Affichage des runes
-        if game_data.unit.runes:
-            self.text_area.insert(tk.END, f"Runes : \n")
-            for rune_data in game_data.unit.runes:
-                # On suppose que Rune.from_json() est appelé pour chaque rune_data
-                rune = Rune.from_json(rune_data)
-                self.text_area.insert(tk.END, f"  - Rune ID: {rune.rune_id}, Set: {rune.set_id}, Slot: {rune.slot_no}, Rank: {rune.rank}\n")
-                self.text_area.insert(tk.END, f"    Effet principal: {rune.pri_eff}\n")
-                self.text_area.insert(tk.END, f"    Effet préfixe: {rune.prefix_eff}\n")
-                self.text_area.insert(tk.END, f"    Effets secondaires: {rune.sec_eff}\n")
-                self.text_area.insert(tk.END, f"    Extra: {rune.extra}\n")
-
-        # Afficher d'autres données supplémentaires que tu souhaites
-        self.text_area.insert(tk.END, f"\nAutres données...\n")
-
-# Lancer l'application
 if __name__ == "__main__":
     app = Application()
     app.mainloop()

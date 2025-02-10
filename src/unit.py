@@ -1,76 +1,76 @@
 # unit.py
 
 class Unit:
-    def __init__(self, unit_id, wizard_id, island_id, pos_x, pos_y, building_id, unit_master_id, unit_level, 
-                 class_type, con, atk, def_, spd, resist, accuracy, critical_rate, critical_damage, 
-                 experience, exp_gained, exp_gain_rate, skills, runes, artifacts, costume_master_id, trans_items, 
-                 attribute, create_time, source, homunculus, homunculus_name, unit_index, awakening_info):
-        self.unit_id = unit_id
-        self.wizard_id = wizard_id
-        self.island_id = island_id
-        self.pos_x = pos_x
-        self.pos_y = pos_y
-        self.building_id = building_id
-        self.unit_master_id = unit_master_id
-        self.unit_level = unit_level
-        self.class_type = class_type
-        self.con = con
-        self.atk = atk
-        self.def_ = def_
-        self.spd = spd
-        self.resist = resist
-        self.accuracy = accuracy
-        self.critical_rate = critical_rate
-        self.critical_damage = critical_damage
-        self.experience = experience
-        self.exp_gained = exp_gained
-        self.exp_gain_rate = exp_gain_rate
-        self.skills = skills
-        self.runes = runes
-        self.artifacts = artifacts
-        self.costume_master_id = costume_master_id
-        self.trans_items = trans_items
-        self.attribute = attribute
-        self.create_time = create_time
-        self.source = source
-        self.homunculus = homunculus
-        self.homunculus_name = homunculus_name
-        self.unit_index = unit_index
-        self.awakening_info = awakening_info
+    def __init__(self, json_data):
+        # Données principales de l'unité
+        self.unit_id = json_data.get('unit_id')
+        self.wizard_id = json_data.get('wizard_id')
+        self.unit_master_id = json_data.get('unit_master_id')
+        self.unit_level = json_data.get('unit_level')
+        self.stars = json_data.get('class')
+        self.attribute = json_data.get('attribute')
+        
+        # Stats de base (brutes)
+        self._con = json_data.get('con')
+        self._atk = json_data.get('atk')
+        self._def = json_data.get('def')
+        
+        # Stats calculées
+        self.stats = {
+            'hp': self.calculate_hp(),
+            'hp_base': self._con,
+            'atk': self._atk,
+            'def': self._def,
+            'spd': json_data.get('spd'),
+            'resist': json_data.get('resist'),
+            'accuracy': json_data.get('accuracy'),
+            'critical_rate': json_data.get('critical_rate'),
+            'critical_damage': json_data.get('critical_damage')
+        }
+        
+        # Compétences
+        self.skills = json_data.get('skills', [])
+        
+        # Runes
+        self.runes = []
+        for rune_data in json_data.get('runes', []):
+            rune = {
+                'slot': rune_data.get('slot_no'),
+                'set_id': rune_data.get('set_id'),
+                'rank': rune_data.get('rank'),
+                'stars': rune_data.get('class'),
+                'primary_effect': rune_data.get('pri_eff'),
+                'secondary_effects': rune_data.get('sec_eff')
+            }
+            self.runes.append(rune)
+        
+        # Artefacts
+        self.artifacts = []
+        for artifact_data in json_data.get('artifacts', []):
+            artifact = {
+                'slot': artifact_data.get('slot'),
+                'type': artifact_data.get('type'),
+                'primary_effect': artifact_data.get('pri_effect'),
+                'secondary_effects': artifact_data.get('sec_effects')
+            }
+            self.artifacts.append(artifact)
 
-    @classmethod
-    def from_json(cls, json_data):
-        return cls(
-            unit_id=json_data["unit_id"],
-            wizard_id=json_data["wizard_id"],
-            island_id=json_data["island_id"],
-            pos_x=json_data["pos_x"],
-            pos_y=json_data["pos_y"],
-            building_id=json_data["building_id"],
-            unit_master_id=json_data["unit_master_id"],
-            unit_level=json_data["unit_level"],
-            class_type=json_data["class"],
-            con=json_data["con"],
-            atk=json_data["atk"],
-            def_=json_data["def"],  # "def" est un mot réservé, donc on utilise "def_" comme nom de variable
-            spd=json_data["spd"],
-            resist=json_data["resist"],
-            accuracy=json_data["accuracy"],
-            critical_rate=json_data["critical_rate"],
-            critical_damage=json_data["critical_damage"],
-            experience=json_data["experience"],
-            exp_gained=json_data["exp_gained"],
-            exp_gain_rate=json_data["exp_gain_rate"],
-            skills=json_data["skills"],
-            runes=json_data["runes"],
-            artifacts=json_data["artifacts"],
-            costume_master_id=json_data["costume_master_id"],
-            trans_items=json_data["trans_items"],
-            attribute=json_data["attribute"],
-            create_time=json_data["create_time"],
-            source=json_data["source"],
-            homunculus=json_data["homunculus"],
-            homunculus_name=json_data["homunculus_name"],
-            unit_index=json_data["unit_index"],
-            awakening_info=json_data["awakening_info"]
-        )
+    def calculate_hp(self):
+        """Calcule les HP totaux selon le niveau et les étoiles"""
+        if self._con is None:
+            return 0
+            
+        multiplier = {
+            6: 15,  # 6★ = HP base * 15
+            5: 14,  # 5★ = HP base * 14
+            4: 13,  # 4★ = HP base * 13
+            3: 12,  # 3★ = HP base * 12
+            2: 11,  # 2★ = HP base * 11
+            1: 10   # 1★ = HP base * 10
+        }.get(self.stars, 1)
+        
+        # Le multiplicateur ne s'applique qu'aux monstres niveau 40
+        if self.unit_level == 40:
+            return self._con * multiplier
+        else:
+            return self._con

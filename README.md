@@ -1,2 +1,2 @@
 # Rune Optimizer
-Projet d'optimisation de runes en Python.
+Projet d'optimisation en Python.
