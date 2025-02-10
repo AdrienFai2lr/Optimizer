@@ -1,6 +1,8 @@
+# rune.py
 class Rune:
-    def __init__(self, rune_id, wizard_id, occupied_type, occupied_id, slot_no, rank, class_type, set_id, 
-                 upgrade_limit, upgrade_curr, base_value, sell_value, pri_eff, prefix_eff, sec_eff, extra):
+    def __init__(self, rune_id, wizard_id, occupied_type, occupied_id, slot_no, rank, 
+                 class_type, set_id, upgrade_limit, upgrade_curr, base_value, sell_value, 
+                 pri_eff, prefix_eff, sec_eff, extra):
         self.rune_id = rune_id
         self.wizard_id = wizard_id
         self.occupied_type = occupied_type
@@ -27,7 +29,7 @@ class Rune:
             occupied_id=json_data["occupied_id"],
             slot_no=json_data["slot_no"],
             rank=json_data["rank"],
-            class_type=json_data["class"],  
+            class_type=json_data["class"],
             set_id=json_data["set_id"],
             upgrade_limit=json_data["upgrade_limit"],
             upgrade_curr=json_data["upgrade_curr"],
