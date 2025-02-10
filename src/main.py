@@ -25,6 +25,12 @@ class Application(tk.Tk):
         # Bouton de chargement
         tk.Button(control_frame, text="Charger JSON", command=self.load_json).pack(side=tk.LEFT, padx=5)
         
+        # Checkbox pour filtrer les unités max
+        self.show_max_only = tk.BooleanVar(value=True)
+        tk.Checkbutton(control_frame, text="Unités 6★ niveau 40 uniquement", 
+                      variable=self.show_max_only, 
+                      command=self.update_unit_selector).pack(side=tk.LEFT, padx=5)
+        
         # Labels d'information
         self.info_label = tk.Label(control_frame, text="")
         self.info_label.pack(side=tk.LEFT, padx=10)
@@ -74,7 +80,10 @@ class Application(tk.Tk):
     def update_unit_selector(self):
         """Met à jour la liste déroulante des unités"""
         units = []
-        for unit in self.unit_manager.units:
+        # Utiliser soit toutes les unités soit uniquement les 6★ niveau 40
+        display_units = self.unit_manager.get_max_level_units() if self.show_max_only.get() else self.unit_manager.units
+        
+        for unit in display_units:
             # Format: "ID: xxx - Monster ID: xxx - Niveau: xx - ★★★★★★"
             stars = "★" * unit.stars
             unit_str = f"ID: {unit.unit_id} - Monster ID: {unit.unit_master_id} - Niveau: {unit.unit_level} - {stars}"
@@ -84,6 +93,11 @@ class Application(tk.Tk):
         if units:
             self.unit_selector.set(units[0][0])
             self.display_unit_details(units[0][1])
+            # Mettre à jour le compteur
+            filtered_count = len(display_units)
+            total_count = len(self.unit_manager.units)
+            self.info_label.config(text=f"Compte: {self.unit_manager.current_wizard_id} - "
+                                      f"Affichées: {filtered_count}/{total_count} unités")
     
     def on_unit_selected(self, event):
         """Gère la sélection d'une unité dans la liste déroulante"""
@@ -110,7 +124,7 @@ class Application(tk.Tk):
         
         # Stats
         self.details_text.insert(tk.END, "\nStats:\n")
-        self.details_text.insert(tk.END, f"- HP: {unit.stats['hp']} (base: {unit.stats['hp_base']})\n")
+        self.details_text.insert(tk.END, f"- HP: {unit.stats['hp']})\n")
         self.details_text.insert(tk.END, f"- ATK: {unit.stats['atk']}\n")
         self.details_text.insert(tk.END, f"- DEF: {unit.stats['def']}\n")
         self.details_text.insert(tk.END, f"- SPD: {unit.stats['spd']}\n")

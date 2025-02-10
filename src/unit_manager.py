@@ -45,6 +45,10 @@ class UnitManager:
             logging.error(f"Erreur lors du chargement du fichier: {str(e)}")
             raise Exception(f"Erreur lors du chargement du fichier: {str(e)}")
 
+    def get_max_level_units(self):
+        """Récupère toutes les unités 6★ niveau 40"""
+        return [unit for unit in self.units if unit.stars == 6 and unit.unit_level == 40]
+
     def _add_unit(self, unit_data):
         """Ajoute une unité si elle est valide"""
         try:
@@ -58,6 +62,8 @@ class UnitManager:
                 if unit_data['wizard_id'] == self.current_wizard_id:
                     unit = Unit(unit_data)
                     self.units.append(unit)
+                    if unit.stars == 6 and unit.unit_level == 40:
+                        logging.info(f"Unité 6★ niveau 40 ajoutée: ID {unit.unit_id}")
                     logging.debug(f"Unité ajoutée: ID {unit.unit_id}, Level {unit.unit_level}, Stars {unit.stars}")
         except Exception as e:
             logging.error(f"Erreur lors de l'ajout d'une unité: {str(e)}")
