@@ -134,29 +134,32 @@ class Application(tk.Tk):
         self.details_text.insert(tk.END, "Informations principales:\n")
         main_info = {
             'ID': unit.unit_id,
-            'Monster ID': unit.unit_master_id,
+            'Nom': unit.name,
+            'Famille': unit.family,
+            'Élément': unit.element,
+            'Type': unit.type,
             'Niveau': unit.unit_level,
-            'Étoiles': '★' * unit.stars,
-            'Attribut': unit.attribute
+            'Étoiles': '★' * unit.stars
         }
         for key, value in main_info.items():
             self.details_text.insert(tk.END, f"{key}: {value}\n")
         
         # Stats
         self.details_text.insert(tk.END, "\nStats:\n")
-        for stat, value in unit.stats.items():
-            if stat in ['hp', 'atk', 'def', 'spd']:
+        stats_order = ['hp', 'atk', 'def', 'spd', 'critical_rate', 
+                      'critical_damage', 'resist', 'accuracy']
+        for stat in stats_order:
+            value = unit.stats[stat]
+            if stat in ['resist', 'accuracy', 'critical_rate', 'critical_damage']:
+                self.details_text.insert(tk.END, f"{stat.replace('_', ' ').title()}: {value}%\n")
+            else:
                 self.details_text.insert(tk.END, f"{stat.upper()}: {value}\n")
-            elif stat in ['resist', 'accuracy', 'critical_rate', 'critical_damage']:
-                formatted_stat = stat.replace('_', ' ').title()
-                self.details_text.insert(tk.END, f"{formatted_stat}: {value}%\n")
         
         # Skills
         if unit.skills:
             self.details_text.insert(tk.END, "\nCompétences:\n")
             for skill in unit.skills:
                 self.details_text.insert(tk.END, f"ID {skill[0]}: Niveau {skill[1]}\n")
-                
     def _update_equipment_widgets(self, unit):
         if hasattr(unit, 'runes'):
             self.rune_widget.draw_items(unit.runes)
